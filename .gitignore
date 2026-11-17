@@ -3,3 +3,4 @@ __pycache__/
 .venv/
 .deps/
 _install_deps.py
+config.py
