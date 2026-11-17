@@ -1,3 +1,4 @@
 fast-flights==3.1.0
+primp>=2.0,<3
+selectolax>=1.0,<2
 requests>=2.31,<3
-typing_extensions>=4.12

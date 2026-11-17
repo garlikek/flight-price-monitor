@@ -1,18 +1,20 @@
 # PRG → TPA flight price monitor
 
-Watches return-trip fares from Prague (PRG) to Tampa (TPA) for a ~2-week
+Watches round-trip fares from Prague (PRG) to Tampa (TPA) for a ~2-week
 December trip (outbound early December, return between Christmas and New Year)
-and sends alerts to Telegram.
+and sends alerts to Telegram twice a day.
 
 ## How it works
 
-- `monitor.py` queries Google Flights via the keyless `fast-flights` library
-  for 6 curated date pairs.
-- It filters out itineraries with more than 2 stops per direction, a leg over
-  16 hours, or a layover over 3 hours.
-- It alerts on a new all-time low, or whenever the cheapest qualifying fare is
-  at or below the target price (default €900).
-- `history.json` stores the all-time low and recent runs so drops are detected.
+- `monitor.py` requests Google Flights for two nearby date pairs and reads the
+  **price grid** Google embeds in the initial page (the numbers behind its
+  "price graph"). This avoids the consent wall and the broken itinerary parser
+  in `fast-flights`.
+- It keeps date pairs with outbound 7–15 Dec and return 24 Dec – 3 Jan, then
+  alerts on a new all-time low or whenever the cheapest fare is at or below
+  the target price (default €900).
+- Alerts include a direct Google Flights link for the winning dates.
+- `history.json` stores the all-time low and recent runs for drop detection.
 
 ## Schedule
 
@@ -21,22 +23,18 @@ You can also trigger it manually from the Actions tab ("Run workflow").
 
 ## Configuration
 
-Edit these values in `.github/workflows/flight-monitor.yml` env block or in
-`monitor.py`:
-
-- `TARGET_PRICE_EUR` (default `900`)
-- `MAX_LEG_MINUTES` (default `960` = 16h per direction)
-- `MAX_LAYOVER_MINUTES` (default `180`)
-- `MAX_STOPS` (default `2`)
-- `DATE_PAIRS` in `monitor.py`
+- `TARGET_PRICE_EUR` — alert threshold (default `900`), set in the workflow env.
+- `MIN_OUT` / `MAX_OUT` / `MIN_RET` / `MAX_RET` and `BASE_QUERIES` in `monitor.py`.
 
 Secrets (repo Settings → Secrets and variables → Actions):
 
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID`
 
-## Note
+## Caveats
 
-Google Flights occasionally serves an EU consent page to datacenter IPs. When
-that happens the affected lookups fail, the bot sends a "no qualifying
-itineraries" warning, and the next scheduled run retries. No API key is needed.
+- The price grid reports fares only; it does not expose stops or layover
+  lengths. Check the linked itinerary before booking if the 16h / no-long-layover
+  rule matters for a given fare.
+- If Google changes the page layout or blocks the runner, the bot sends a
+  warning and the next scheduled run retries.
