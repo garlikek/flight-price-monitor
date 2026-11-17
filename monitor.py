@@ -11,6 +11,7 @@ Runs twice a day from GitHub Actions (08:00 and 18:00 CET).
 
 import json
 import os
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import quote
@@ -76,12 +77,23 @@ def fetch_grid(out_date: str, ret_date: str):
         referer=True,
         cookie_store=True,
     )
-    html = client.get(
-        "https://www.google.com/travel/flights", params=params, timeout=45
-    ).text
 
-    if "consent.google.com" in html[:2000]:
-        raise RuntimeError("Google consent page returned")
+    last_error = None
+    for attempt in range(3):
+        try:
+            html = client.get(
+                "https://www.google.com/travel/flights", params=params, timeout=45
+            ).text
+            if "consent.google.com" in html[:2000]:
+                raise RuntimeError("Google consent page returned")
+            break
+        except Exception as exc:
+            last_error = exc
+            if attempt < 2:
+                time.sleep(2 * (attempt + 1))
+    else:
+        raise RuntimeError(f"Google fetch failed after 3 attempts: {last_error}")
+
     script = LexborHTMLParser(html).css_first(r"script.ds\:1")
     if script is None:
         raise RuntimeError("price-grid script not found (blocked or layout changed)")
@@ -162,7 +174,10 @@ def main():
     if cheapest["price"] <= TARGET_PRICE:
         lines.append(f"✅ At or below your €{TARGET_PRICE:.0f} target — worth a look!")
     if failures:
-        lines.append(f"⚠️ {len(failures)}/{len(BASE_QUERIES)} lookups failed")
+        lines.append(
+            f"⚠️ {len(failures)}/{len(BASE_QUERIES)} lookups failed: "
+            + failures[0]
+        )
 
     message = "\n".join(lines)
     telegram(message)
