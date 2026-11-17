@@ -98,7 +98,16 @@ def fetch_grid(out_date: str, ret_date: str):
     if script is None:
         raise RuntimeError("price-grid script not found (blocked or layout changed)")
 
-    payload = json.loads(script.text().split("data:", 1)[1].rsplit(",", 1)[0])
+    script_text = script.text()
+    marker = "data:"
+    start = script_text.find(marker)
+    if start < 0:
+        raise RuntimeError("price-grid data not found in script")
+    # Google sometimes appends extra JavaScript after the JSON literal, so use
+    # raw_decode to read just the first complete JSON value.
+    payload, _ = json.JSONDecoder().raw_decode(
+        script_text[start + len(marker) :].lstrip()
+    )
     grid = payload[6][0][4][0]  # list of [out_date, ret_date, [price, token], ...]
 
     entries = []
