@@ -36,7 +36,7 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          TARGET_PRICE_EUR: '900'
+          TARGET_PRICE_EUR: '800'
         run: python monitor.py
 
       - name: Persist price history
